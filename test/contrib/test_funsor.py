@@ -437,6 +437,42 @@ def test_scan_enum_two_latents():
     assert_allclose(actual_log_joint, expected_log_joint)
 
 
+@pytest.mark.xfail(
+    reason="one of the discrete latents looses a dim name during tracing"
+)
+def test_scan_enum_two_latents_indexing_different_vars():
+    num_steps = 11
+    data = random.normal(random.PRNGKey(0), (num_steps,))
+    probs_x = jnp.array([[0.8, 0.2], [0.1, 0.9]])
+    probs_w = jnp.array([[0.7, 0.3], [0.6, 0.4]])
+    locs = jnp.array([-1.0, 1.0])
+    sigmas = jnp.array([0.1, 1.0])
+
+    def model(data):
+        x = w = 0
+        for i, y in markov(enumerate(data)):
+            x = numpyro.sample(f"x_{i}", dist.Categorical(probs_x[x]))
+            w = numpyro.sample(f"w_{i}", dist.Categorical(probs_w[w]))
+            numpyro.sample(f"y_{i}", dist.Normal(locs[w], sigmas[x]), obs=y)
+
+    def fun_model(data):
+        def transition_fn(carry, y):
+            x, w = carry
+            x = numpyro.sample("x", dist.Categorical(probs_x[x]))
+            w = numpyro.sample("w", dist.Categorical(probs_w[w]))
+            numpyro.sample("y", dist.Normal(locs[w], sigmas[x]), obs=y)
+            # also test if scan's `ys` are recorded corrected
+            return (x, w), x
+
+        scan(transition_fn, (0, 0), data)
+
+    actual_log_joint = log_density(enum(config_enumerate(fun_model)), (data,), {}, {})[
+        0
+    ]
+    expected_log_joint = log_density(enum(config_enumerate(model)), (data,), {}, {})[0]
+    assert_allclose(actual_log_joint, expected_log_joint)
+
+
 def test_scan_enum_scan_enum():
     num_steps = 11
     data_x = random.normal(random.PRNGKey(0), (num_steps,))
