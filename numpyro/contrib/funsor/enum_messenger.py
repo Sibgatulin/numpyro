@@ -618,8 +618,10 @@ class trace(OrigTraceMessenger):
                 jnp.shape(msg["value"])[: jnp.ndim(msg["value"]) - msg["fn"].event_dim],
             )
             msg["infer"]["dim_to_name"] = NamedMessenger._get_dim_to_name(
-                total_batch_shape
+                total_batch_shape, dim_to_name=msg["infer"].get("dim_to_name")
             )
+
+
             msg["infer"]["name_to_dim"] = {
                 name: dim for dim, name in msg["infer"]["dim_to_name"].items()
             }
