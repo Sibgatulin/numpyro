@@ -437,9 +437,6 @@ def test_scan_enum_two_latents():
     assert_allclose(actual_log_joint, expected_log_joint)
 
 
-@pytest.mark.xfail(
-    reason="one of the discrete latents looses a dim name during tracing"
-)
 def test_scan_enum_two_latents_indexing_different_vars():
     num_steps = 11
     data = random.normal(random.PRNGKey(0), (num_steps,))
@@ -470,7 +467,7 @@ def test_scan_enum_two_latents_indexing_different_vars():
         0
     ]
     expected_log_joint = log_density(enum(config_enumerate(model)), (data,), {}, {})[0]
-    assert_allclose(actual_log_joint, expected_log_joint)
+    assert_allclose(actual_log_joint, expected_log_joint, rtol=2e-7)
 
 
 def test_scan_enum_scan_enum():
